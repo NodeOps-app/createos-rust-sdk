@@ -1,0 +1,39 @@
+[package]
+name = "createos"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Async Rust SDK for CreateOS cloud sandboxes"
+license = "MIT"
+repository = "https://github.com/NodeOps-app/createos-rust-sdk"
+keywords = ["createos", "sandbox", "cloud", "sdk"]
+categories = ["api-bindings", "development-tools"]
+
+[dependencies]
+base64 = "=0.22.1"
+axum = "=0.8.4"
+bytes = "=1.10.1"
+chrono = { version = "=0.4.40", features = ["serde"] }
+futures-util = "=0.3.31"
+rand = "=0.9.0"
+reqwest = { version = "=0.12.15", default-features = false, features = ["json", "rustls-tls", "stream"] }
+percent-encoding = "=2.3.1"
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+thiserror = "=2.0.12"
+tokio = { version = "=1.44.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+url = "=2.5.0"
+
+[dev-dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+too_many_arguments = "allow"
+too_many_lines = "allow"
