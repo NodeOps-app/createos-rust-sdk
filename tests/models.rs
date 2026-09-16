@@ -1,4 +1,7 @@
-use createos::{CreateSandboxRequest, SandboxStatus, TemplateLogEvent};
+use createos::{
+    ComputerButtonRequest, ComputerCreateScreenRequest, ComputerScrollRequest,
+    CreateSandboxRequest, PtySize, SandboxStatus, TemplateLogEvent,
+};
 
 #[test]
 fn request_uses_api_wire_names_and_omits_defaults() {
@@ -26,4 +29,16 @@ fn template_log_final_field_round_trips() {
     let event: TemplateLogEvent = serde_json::from_str(r#"{"final":true,"new_field":42}"#).unwrap();
     assert!(event.final_);
     assert_eq!(event.extra["new_field"], 42);
+}
+
+#[test]
+fn go_compatible_optional_request_defaults_are_omitted() {
+    for value in [
+        serde_json::to_value(PtySize::default()).unwrap(),
+        serde_json::to_value(ComputerScrollRequest::default()).unwrap(),
+        serde_json::to_value(ComputerButtonRequest::default()).unwrap(),
+        serde_json::to_value(ComputerCreateScreenRequest::default()).unwrap(),
+    ] {
+        assert_eq!(value, serde_json::json!({}));
+    }
 }

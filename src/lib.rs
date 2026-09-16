@@ -12,7 +12,7 @@ mod services;
 mod transport;
 
 pub use client::{Client, ClientBuilder};
-pub use error::{ApiError, Error, Result};
+pub use error::{ApiError, CommandError, Error, Result};
 pub use instance::{Instance, self_delete, self_pause};
 pub use models::*;
 pub use services::{

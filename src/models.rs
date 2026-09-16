@@ -19,6 +19,8 @@ macro_rules! string_type {
             pub fn new(value: impl Into<String>) -> Self { Self(value.into()) }
             /// Returns the wire representation.
             pub fn as_str(&self) -> &str { &self.0 }
+            /// Returns whether the wire representation is empty.
+            pub fn is_empty(&self) -> bool { self.0.is_empty() }
         }
         impl From<&str> for $name { fn from(value: &str) -> Self { Self(value.to_owned()) } }
         impl From<String> for $name { fn from(value: String) -> Self { Self(value) } }
@@ -277,7 +279,10 @@ model!(/// Command execution request.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")] stream: bool
 });
 model!(/// PTY dimensions.
-    PtySize { rows: u32, cols: u32 });
+PtySize {
+    #[serde(default, skip_serializing_if = "is_zero")] rows: u32,
+    #[serde(default, skip_serializing_if = "is_zero")] cols: u32
+});
 model!(/// Persistent managed-process request.
     ManagedProcessCreateRequest {
         #[serde(default, skip_serializing_if = "String::is_empty", rename = "cmd")] command: String,
@@ -289,13 +294,18 @@ model!(/// Persistent managed-process request.
 model!(/// Mouse click request.
     ComputerClickRequest { #[serde(default, skip_serializing_if = "Option::is_none")] button: Option<ComputerMouseButton>, #[serde(default, skip_serializing_if = "Option::is_none")] x: Option<i32>, #[serde(default, skip_serializing_if = "Option::is_none")] y: Option<i32>, #[serde(default, skip_serializing_if = "Option::is_none")] count: Option<u32> });
 model!(/// Mouse scroll request.
-    ComputerScrollRequest { direction: ComputerScrollDirection, amount: i32 });
+ComputerScrollRequest {
+    #[serde(default, skip_serializing_if = "ComputerScrollDirection::is_empty")] direction: ComputerScrollDirection,
+    #[serde(default, skip_serializing_if = "is_zero")] amount: i32
+});
 model!(/// Desktop coordinate.
     ComputerPoint { x: i32, y: i32 });
 model!(/// Mouse drag request.
     ComputerDragRequest { from: ComputerPoint, to: ComputerPoint });
 model!(/// Mouse button request.
-    ComputerButtonRequest { button: ComputerMouseButton });
+ComputerButtonRequest {
+    #[serde(default, skip_serializing_if = "ComputerMouseButton::is_empty")] button: ComputerMouseButton
+});
 model!(/// Keyboard typing request.
     ComputerTypeRequest { text: String, #[serde(default, skip_serializing_if = "Option::is_none", rename = "delay_in_ms")] delay_ms: Option<u64> });
 model!(/// Desktop target request.
@@ -307,7 +317,10 @@ model!(/// Window move request.
 model!(/// Window resize request.
     ComputerWindowResizeRequest { width: u32, height: u32 });
 model!(/// Screen create or resize request.
-    ComputerCreateScreenRequest { width: u32, height: u32 });
+ComputerCreateScreenRequest {
+    #[serde(default, skip_serializing_if = "is_zero")] width: u32,
+    #[serde(default, skip_serializing_if = "is_zero")] height: u32
+});
 model!(/// Template creation request.
     TemplateCreateRequest { name: String, dockerfile: String, #[serde(default, skip_serializing_if = "Option::is_none")] base: Option<String> });
 model!(/// Non-secret S3 disk configuration.
@@ -459,4 +472,8 @@ pub struct DetachDiskOptions {
     pub disk_id: String,
     /// Mount path currently used inside the sandbox.
     pub mount_path: String,
+}
+
+fn is_zero<T: Default + PartialEq>(value: &T) -> bool {
+    value == &T::default()
 }

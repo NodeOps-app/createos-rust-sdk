@@ -1,3 +1,4 @@
+use crate::RunCommandResponse;
 use reqwest::{StatusCode, header::HeaderMap};
 use serde_json::Value;
 use std::{fmt, time::Duration};
@@ -42,6 +43,29 @@ impl fmt::Display for ApiError {
 }
 
 impl std::error::Error for ApiError {}
+
+/// A shell command that completed with a nonzero exit code or agent error.
+#[derive(Debug)]
+pub struct CommandError {
+    /// Complete command response, including stdout, stderr, and exit status.
+    pub response: RunCommandResponse,
+}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let result = &self.response.result;
+        write!(f, "command exited with status {}", result.exit_code)?;
+        if !result.error_message.is_empty() {
+            write!(f, "\nerror: {}", result.error_message)?;
+        }
+        if !result.standard_error.is_empty() {
+            write!(f, "\nstderr: {}", tail(&result.standard_error, 2000))?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for CommandError {}
 
 impl ApiError {
     pub(crate) async fn from_response(
@@ -131,6 +155,9 @@ pub enum Error {
     /// The API returned a non-successful response.
     #[error(transparent)]
     Api(#[from] ApiError),
+    /// A shell command completed unsuccessfully.
+    #[error(transparent)]
+    Command(#[from] CommandError),
     /// The API response did not match the protocol.
     #[error("protocol error: {0}")]
     Protocol(String),
@@ -146,4 +173,15 @@ pub enum Error {
     /// An SDK wait operation exceeded its budget.
     #[error("operation timed out after {0:?}")]
     Timeout(Duration),
+}
+
+fn tail(value: &str, maximum: usize) -> &str {
+    if value.len() <= maximum {
+        return value;
+    }
+    let mut start = value.len() - maximum;
+    while !value.is_char_boundary(start) {
+        start += 1;
+    }
+    &value[start..]
 }

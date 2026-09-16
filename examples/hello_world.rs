@@ -1,4 +1,4 @@
-use createos::{Client, CreateSandboxRequest, ExecOptions, RunCommandRequest};
+use createos::{Client, CreateSandboxRequest};
 
 #[tokio::main]
 async fn main() -> createos::Result<()> {
@@ -10,26 +10,9 @@ async fn main() -> createos::Result<()> {
             ..Default::default()
         })
         .await?;
-    println!("created: {}", sandbox.id());
-
-    let result = sandbox
-        .run_command(
-            RunCommandRequest {
-                command: "sh".into(),
-                arguments: vec![
-                    "-c".into(),
-                    "printf 'Rust says hello from '; uname -m".into(),
-                ],
-                ..Default::default()
-            },
-            ExecOptions::default(),
-        )
-        .await;
+    let output = sandbox.shell("echo Hello from Rust").await;
 
     let cleanup = sandbox.destroy().await;
-    let response = result?;
-    print!("{}", response.result.standard_output);
-    cleanup?;
-    println!("destroyed");
-    Ok(())
+    print!("{}", output?.result.standard_output);
+    cleanup
 }

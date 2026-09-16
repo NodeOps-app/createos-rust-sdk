@@ -93,7 +93,6 @@ still disables redirects so credentials cannot be forwarded to another origin.
 - [CreateOS Sandbox API documentation](https://nodeops.network/createos/docs)
 - Rust API reference: run `cargo doc --open` locally; docs.rs will be available
   after the first crates.io release
-- [CreateOS Go SDK](https://github.com/NodeOps-app/createos-go-sdk)
 - [CreateOS TypeScript SDK](https://github.com/NodeOps-app/createos-sandbox-sdk)
 - [Runnable examples](#examples)
 - [Contributing guide](CONTRIBUTING.md)
@@ -307,7 +306,8 @@ mutations and `refresh()` update it, while `id()`, `name()`, `status()`,
 
 All operations return `createos::Result<T>`. Match `Error::Api(error)` to inspect
 the HTTP status, stable API code, request ID, headers, endpoint, and raw body.
-`Error::Timeout` identifies SDK polling timeouts.
+`Error::Command(error)` retains the complete response for a failed shell command,
+and `Error::Timeout` identifies SDK polling timeouts.
 
 ```rust,no_run
 # use createos::{Client, Error};
@@ -330,7 +330,7 @@ match client.who_am_i().await {
 
 ## Examples
 
-Runnable examples mirror the Go SDK's coverage:
+Runnable examples cover the primary sandbox workflows:
 
 - [Hello world](examples/hello_world.rs)
 - [HTTP execution server](examples/execution-server/README.md)

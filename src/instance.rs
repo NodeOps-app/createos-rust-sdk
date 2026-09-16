@@ -258,8 +258,16 @@ impl Instance {
             )
             .await
     }
-    /// Runs a Bash script and treats a nonzero exit as an error.
+    /// Runs a Bash script with default execution options.
     pub async fn shell(&self, script: impl Into<String>) -> Result<RunCommandResponse> {
+        self.shell_with(script, ExecOptions::default()).await
+    }
+    /// Runs a Bash script with execution options and treats a nonzero exit as an error.
+    pub async fn shell_with(
+        &self,
+        script: impl Into<String>,
+        options: ExecOptions,
+    ) -> Result<RunCommandResponse> {
         let response = self
             .run_command(
                 RunCommandRequest {
@@ -267,27 +275,13 @@ impl Instance {
                     arguments: vec!["-lc".into(), script.into()],
                     ..RunCommandRequest::default()
                 },
-                ExecOptions::default(),
+                options,
             )
             .await?;
         if response.result.exit_code == 0 && response.result.error_message.is_empty() {
             return Ok(response);
         }
-        let stderr = tail(&response.result.standard_error, 2000);
-        Err(Error::Protocol(format!(
-            "command exited with status {}{}{}",
-            response.result.exit_code,
-            if response.result.error_message.is_empty() {
-                String::new()
-            } else {
-                format!("\nerror: {}", response.result.error_message)
-            },
-            if stderr.is_empty() {
-                String::new()
-            } else {
-                format!("\nstderr: {stderr}")
-            }
-        )))
+        Err(crate::CommandError { response }.into())
     }
     /// Starts a streaming command.
     pub async fn stream_command(
@@ -594,17 +588,6 @@ struct ValueAck {
     #[serde(default)]
     ok: bool,
 }
-fn tail(value: &str, maximum: usize) -> &str {
-    if value.len() <= maximum {
-        return value;
-    }
-    let mut start = value.len() - maximum;
-    while !value.is_char_boundary(start) {
-        start += 1;
-    }
-    &value[start..]
-}
-
 /// Asks the local sandbox agent to pause its own sandbox.
 pub async fn self_pause(reason: Option<&str>) -> Result<()> {
     self_signal("pause", reason).await
