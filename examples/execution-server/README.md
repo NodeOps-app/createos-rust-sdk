@@ -5,7 +5,7 @@ A `POST /v1/execute` request creates a fresh sandbox, runs one command, captures
 its output, destroys the sandbox, and returns JSON.
 
 ```sh
-export CREATEOS_SANDBOX_API_KEY="your-api-key"
+export CREATEOS_API_KEY="your-api-key"
 cargo run --example execution_server
 ```
 

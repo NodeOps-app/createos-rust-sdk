@@ -75,7 +75,7 @@ impl ClientBuilder {
     pub fn build(self) -> Result<Client> {
         let api_key = self
             .api_key
-            .or_else(|| env::var("CREATEOS_SANDBOX_API_KEY").ok())
+            .or_else(|| env::var("CREATEOS_API_KEY").ok())
             .map(|key| key.trim().to_owned())
             .filter(|key| !key.is_empty());
         let raw_url = self

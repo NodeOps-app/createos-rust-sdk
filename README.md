@@ -77,7 +77,7 @@ let client = Client::builder()
 # Ok(()) }
 ```
 
-`Client::from_env()` reads `CREATEOS_SANDBOX_API_KEY` and the optional
+`Client::from_env()` reads `CREATEOS_API_KEY` and the optional
 `CREATEOS_SANDBOX_BASE_URL`. Explicit builder values take precedence. Never
 commit an API key to source control.
 
@@ -378,7 +378,7 @@ Runnable examples live under [`examples/`](examples/):
 Run one with the API key in the environment:
 
 ```sh
-export CREATEOS_SANDBOX_API_KEY="your-api-key"
+export CREATEOS_API_KEY="your-api-key"
 cargo run --example hello_world
 ```
 
