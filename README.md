@@ -1,7 +1,7 @@
 # CreateOS Rust SDK
 
-Launch an isolated cloud sandbox, run commands, stream output, move files,
-publish a preview URL, and tear everything down from async Rust.
+Launch an isolated cloud sandbox, run real commands, stream output, move files,
+open a preview URL, and tear everything down from async Rust.
 
 ## Your first sandbox
 
@@ -90,14 +90,21 @@ still disables redirects so credentials cannot be forwarded to another origin.
 ## Documentation
 
 - [CreateOS Sandbox overview](https://nodeops.network/createos/docs/Sandbox/Overview)
-- [CreateOS Sandbox API documentation](https://nodeops.network/createos/docs)
-- Rust API reference: run `cargo doc --open` locally; docs.rs will be available
-  after the first crates.io release
+  explains the sandbox model, lifecycle, networking, storage, and isolation.
+- [CreateOS Sandbox documentation](https://nodeops.network/createos/docs)
+  contains the REST API reference and product guides.
+- Rust API reference can be generated locally with `cargo doc --open`; docs.rs
+  will host the public API after the first crates.io release.
 - [CreateOS TypeScript SDK](https://github.com/NodeOps-app/createos-sandbox-sdk)
-- [Runnable examples](#examples)
-- [Contributing guide](CONTRIBUTING.md)
+  provides sandbox capabilities for JavaScript and TypeScript applications.
+- [Runnable examples](#examples) cover command execution, files, streaming,
+  ingress, snapshots, networking, templates, managed processes, and desktop use.
+- [Contributing guide](CONTRIBUTING.md) documents development checks and commit
+  conventions.
 
 ## Stream output as it happens
+
+Long-running commands do not need to disappear behind a buffered HTTP call:
 
 ```rust,no_run
 # use createos::{Client, ExecStreamEventType, RunCommandRequest};
@@ -125,7 +132,8 @@ while let Some(event) = stream.next().await? {
 # Ok(()) }
 ```
 
-Dropping a stream or download response closes its HTTP response body.
+Stopping early is safe: dropping the stream closes its HTTP response body and
+cancels the underlying request.
 
 ## Move files without shell escaping
 
@@ -185,8 +193,9 @@ partial write.
 
 ## Keep a process alive after disconnecting
 
-Managed processes are resources rather than terminal sessions. They support
-output replay, binary input, signals, PTY resizing, and leader/tree waits:
+Managed processes are resources rather than fragile terminal sessions. Start
+one, reconnect from its output sequence, send binary input or signals, resize
+its PTY, and wait for either the leader or its complete process tree:
 
 ```rust,no_run
 # use createos::{Client, ManagedProcessCreateRequest, ManagedProcessWaitOptions, ManagedProcessWaitScope};
@@ -211,6 +220,9 @@ let completed = sandbox.processes().wait(
 ```
 
 ## Turn a service into a URL
+
+Create with ingress enabled, wait for the server to listen, then ask the
+sandbox for its public URL:
 
 ```rust,no_run
 # use createos::{Client, CreateSandboxRequest, ManagedProcessCreateRequest};
@@ -240,15 +252,24 @@ Account-level services are available from the client:
 ```rust,no_run
 # use createos::{Client, PaginationOptions};
 # async fn example(client: Client) -> createos::Result<()> {
-let templates = client.templates().list(PaginationOptions::default()).await?;
-let networks = client.networks().list(PaginationOptions::default()).await?;
-let disks = client.disks().list(PaginationOptions::default()).await?;
+let templates = client.templates();
+let networks = client.networks();
+let disks = client.disks();
+
+let custom_templates = templates.list(PaginationOptions::default()).await?;
+let overlay_networks = networks.list(PaginationOptions::default()).await?;
+let registered_disks = disks.list(PaginationOptions::default()).await?;
+println!(
+    "{} templates ready; networks={}; disks={}",
+    custom_templates.len(),
+    overlay_networks.len(),
+    registered_disks.len()
+);
 # Ok(()) }
 ```
 
-Sandbox handles expose files, managed processes, mouse, keyboard, windows, and
-screens. Lifecycle mutations update the handle's cached projection; call
-`refresh()` to reload it explicitly.
+Sandbox-level services are available whenever a sandbox handle is created or
+retrieved:
 
 ```rust,no_run
 # use createos::Client;
@@ -265,6 +286,9 @@ let screens = sandbox.computer().screens();
 
 ## Connect sandboxes on a private network
 
+Create an overlay network, attach a running sandbox, inspect the resulting
+membership, then clean up in reverse order:
+
 ```rust,no_run
 # use createos::{Client, NetworkCreateRequest};
 # async fn example(client: Client) -> createos::Result<()> {
@@ -279,6 +303,9 @@ for member in connected.members {
     println!("sandbox={} private-ip={} status={}",
         member.sandbox_id, member.ip_address, member.status);
 }
+
+sandbox.detach_network(&network.id).await?;
+client.networks().delete(&network.id).await?;
 # Ok(()) }
 ```
 
@@ -330,7 +357,7 @@ match client.who_am_i().await {
 
 ## Examples
 
-Runnable examples cover the primary sandbox workflows:
+Runnable examples live under [`examples/`](examples/):
 
 - [Hello world](examples/hello_world.rs)
 - [HTTP execution server](examples/execution-server/README.md)
@@ -359,10 +386,11 @@ make check
 make test
 ```
 
-The checks run `rustfmt`, Clippy with warnings denied, all targets and examples,
-tests, and rustdoc. Commits follow Conventional Commits and CI repeats the same
-checks for pushes and pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for
-the accepted commit types and examples.
+Commits follow Conventional Commits and are validated locally and in pull
+requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for accepted types and examples.
+
+The CI pipeline runs `rustfmt`, Clippy with warnings denied across all targets
+and examples, the complete test suite, and rustdoc.
 
 ## Package layout
 
@@ -383,4 +411,4 @@ on the [CreateOS Sandbox product page](https://createos.sh/products/sandbox).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+This SDK is available under the [MIT License](LICENSE).
