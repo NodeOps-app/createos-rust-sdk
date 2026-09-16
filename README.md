@@ -95,12 +95,18 @@ still disables redirects so credentials cannot be forwarded to another origin.
   contains the REST API reference and product guides.
 - Rust API reference can be generated locally with `cargo doc --open`; docs.rs
   will host the public API after the first crates.io release.
-- [CreateOS TypeScript SDK](https://github.com/NodeOps-app/createos-sandbox-sdk)
-  provides sandbox capabilities for JavaScript and TypeScript applications.
 - [Runnable examples](#examples) cover command execution, files, streaming,
   ingress, snapshots, networking, templates, managed processes, and desktop use.
 - [Contributing guide](CONTRIBUTING.md) documents development checks and commit
   conventions.
+
+### SDKs
+
+- [TypeScript](https://github.com/NodeOps-app/createos-sandbox-sdk)
+- [Go](https://github.com/NodeOps-app/createos-go-sdk)
+- [C#](https://github.com/NodeOps-app/createos-csharp-sdk)
+- [Java](https://github.com/NodeOps-app/createos-java-sdk)
+- [Rust](https://github.com/NodeOps-app/createos-rust-sdk)
 
 ## Stream output as it happens
 
