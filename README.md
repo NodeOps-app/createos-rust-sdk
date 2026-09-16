@@ -5,14 +5,14 @@ open a preview URL, and tear everything down from async Rust.
 
 ## Your first sandbox
 
+Add the published [createos crate](https://crates.io/crates/createos) and Tokio
+to your project:
+
 ```toml
 [dependencies]
 createos = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
-
-The crates.io dependency above applies after the first `0.1` release. Until
-then, clone this repository and use a local path dependency while developing.
 
 ```rust,no_run
 use createos::{Client, CreateSandboxRequest, RunCommandRequest};
@@ -93,8 +93,8 @@ still disables redirects so credentials cannot be forwarded to another origin.
   explains the sandbox model, lifecycle, networking, storage, and isolation.
 - [CreateOS Sandbox documentation](https://nodeops.network/createos/docs)
   contains the REST API reference and product guides.
-- Rust API reference can be generated locally with `cargo doc --open`; docs.rs
-  will host the public API after the first crates.io release.
+- [Rust API reference](https://docs.rs/createos/latest/createos/) is published
+  on docs.rs; run `cargo doc --open` to generate it locally.
 - [Runnable examples](#examples) cover command execution, files, streaming,
   ingress, snapshots, networking, templates, managed processes, and desktop use.
 - [Contributing guide](CONTRIBUTING.md) documents development checks and commit
