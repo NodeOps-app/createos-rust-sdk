@@ -32,7 +32,7 @@ fn template_log_final_field_round_trips() {
 }
 
 #[test]
-fn go_compatible_optional_request_defaults_are_omitted() {
+fn optional_request_defaults_are_omitted_from_the_wire_format() {
     for value in [
         serde_json::to_value(PtySize::default()).unwrap(),
         serde_json::to_value(ComputerScrollRequest::default()).unwrap(),

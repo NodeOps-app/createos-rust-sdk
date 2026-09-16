@@ -154,10 +154,10 @@ pub enum Error {
     Transport(#[from] reqwest::Error),
     /// The API returned a non-successful response.
     #[error(transparent)]
-    Api(#[from] ApiError),
+    Api(Box<ApiError>),
     /// A shell command completed unsuccessfully.
     #[error(transparent)]
-    Command(#[from] CommandError),
+    Command(Box<CommandError>),
     /// The API response did not match the protocol.
     #[error("protocol error: {0}")]
     Protocol(String),
@@ -173,6 +173,18 @@ pub enum Error {
     /// An SDK wait operation exceeded its budget.
     #[error("operation timed out after {0:?}")]
     Timeout(Duration),
+}
+
+impl From<ApiError> for Error {
+    fn from(error: ApiError) -> Self {
+        Self::Api(Box::new(error))
+    }
+}
+
+impl From<CommandError> for Error {
+    fn from(error: CommandError) -> Self {
+        Self::Command(Box::new(error))
+    }
 }
 
 fn tail(value: &str, maximum: usize) -> &str {
