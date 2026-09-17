@@ -340,14 +340,14 @@ mutations and `refresh()` update it, while `id()`, `name()`, `status()`,
 
 Build a sandbox root filesystem from a Dockerfile, follow its build logs, and
 wait until the template is ready before creating a sandbox from its ID. See the
-[custom template example](examples/custom_template.rs) for the complete
+[custom template example](examples/custom_template/README.md) for the complete
 workflow and cleanup.
 
 ## Automate a desktop
 
 The desktop root filesystem supports screenshots, mouse and keyboard control,
 clipboard access, and temporary noVNC connections. The
-[desktop example](examples/desktop.rs) exercises these operations.
+[desktop example](examples/desktop/README.md) exercises these operations.
 
 ## Errors stay inspectable
 
@@ -379,15 +379,15 @@ match client.who_am_i().await {
 
 Runnable examples live under [`examples/`](examples/):
 
-- [Hello world](examples/hello_world.rs)
-- [HTTP execution server](examples/execution-server/README.md)
-- [Command streaming](examples/command_streaming.rs)
-- [Files and snapshots](examples/files_and_snapshots.rs)
-- [Ingress preview](examples/ingress_preview.rs)
-- [Private overlay network](examples/network.rs)
-- [Custom template](examples/custom_template.rs)
-- [Managed process lifecycle](examples/managed_process.rs)
-- [Desktop and noVNC](examples/desktop.rs)
+- [Hello world](examples/hello_world/README.md)
+- [HTTP execution server](examples/execution_server/README.md)
+- [Command streaming](examples/command_streaming/README.md)
+- [Files and snapshots](examples/files_and_snapshots/README.md)
+- [Ingress preview](examples/ingress_preview/README.md)
+- [Private overlay network](examples/network/README.md)
+- [Custom template](examples/custom_template/README.md)
+- [Managed process lifecycle](examples/managed_process/README.md)
+- [Desktop and noVNC](examples/desktop/README.md)
 
 Run one with the API key in the environment:
 
