@@ -8,10 +8,9 @@ open a preview URL, and tear everything down from async Rust.
 Add the published [createos crate](https://crates.io/crates/createos) and Tokio
 to your project:
 
-```toml
-[dependencies]
-createos = "0.1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```sh
+cargo add createos
+cargo add tokio --features macros,rt-multi-thread
 ```
 
 ```rust,no_run
@@ -336,6 +335,19 @@ sandbox.destroy().await?;
 The `Instance` handle caches the latest server projection safely. Lifecycle
 mutations and `refresh()` update it, while `id()`, `name()`, `status()`,
 `ip_address()`, and `data()` provide synchronized reads.
+
+## Build reusable templates
+
+Build a sandbox root filesystem from a Dockerfile, follow its build logs, and
+wait until the template is ready before creating a sandbox from its ID. See the
+[custom template example](examples/custom_template.rs) for the complete
+workflow and cleanup.
+
+## Automate a desktop
+
+The desktop root filesystem supports screenshots, mouse and keyboard control,
+clipboard access, and temporary noVNC connections. The
+[desktop example](examples/desktop.rs) exercises these operations.
 
 ## Errors stay inspectable
 
