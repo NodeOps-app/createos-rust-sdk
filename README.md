@@ -99,11 +99,13 @@ still disables redirects so credentials cannot be forwarded to another origin.
   ingress, snapshots, networking, templates, managed processes, and desktop use.
 - [Contributing guide](CONTRIBUTING.md) documents development checks and commit
   conventions.
+- [Security policy](SECURITY.md) explains private vulnerability reporting.
 
 ### SDKs
 
 - [TypeScript](https://github.com/NodeOps-app/createos-sandbox-sdk)
 - [Go](https://github.com/NodeOps-app/createos-go-sdk)
+- [Python](https://github.com/NodeOps-app/createos-python-sdk)
 - [C#](https://github.com/NodeOps-app/createos-csharp-sdk)
 - [Java](https://github.com/NodeOps-app/createos-java-sdk)
 - [Rust](https://github.com/NodeOps-app/createos-rust-sdk)

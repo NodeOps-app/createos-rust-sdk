@@ -8,7 +8,7 @@ use axum::{
 use createos::{Client, CreateSandboxRequest, ExecOptions, RunCommandRequest};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::sync::Semaphore;
+use tokio::{sync::Semaphore, time::Instant};
 
 #[derive(Clone)]
 struct AppState {
@@ -46,35 +46,54 @@ async fn execute(State(state): State<AppState>, Json(input): Json<ExecuteRequest
     let Ok(_permit) = state.slots.clone().try_acquire_owned() else {
         return (StatusCode::TOO_MANY_REQUESTS, "execution capacity reached").into_response();
     };
-    let operation = tokio::time::timeout(Duration::from_secs(120), async {
-        let sandbox = state
-            .client
-            .create_sandbox(CreateSandboxRequest {
-                shape: "s-1vcpu-1gb".into(),
-                rootfs: Some("devbox:1".into()),
-                ..Default::default()
-            })
-            .await?;
-        let result = sandbox
-            .run_command(
-                RunCommandRequest {
-                    command: input.command,
-                    arguments: input.arguments,
-                    standard_input: input.standard_input,
-                    environment_variables: input.environment_variables,
-                    ..Default::default()
-                },
-                ExecOptions::default(),
+    let deadline = Instant::now() + Duration::from_secs(120);
+    let sandbox = match tokio::time::timeout_at(
+        deadline,
+        state.client.create_sandbox(CreateSandboxRequest {
+            shape: "s-1vcpu-1gb".into(),
+            rootfs: Some("devbox:1".into()),
+            ..Default::default()
+        }),
+    )
+    .await
+    {
+        Ok(Ok(sandbox)) => sandbox,
+        Ok(Err(error)) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                format!("execution failed: {error}"),
             )
-            .await;
-        let cleanup = sandbox.destroy().await;
-        let result = result?;
-        cleanup?;
-        Ok::<_, createos::Error>(result)
-    })
+                .into_response();
+        }
+        Err(_) => return (StatusCode::GATEWAY_TIMEOUT, "execution timed out").into_response(),
+    };
+    let operation = tokio::time::timeout_at(
+        deadline,
+        sandbox.run_command(
+            RunCommandRequest {
+                command: input.command,
+                arguments: input.arguments,
+                standard_input: input.standard_input,
+                environment_variables: input.environment_variables,
+                ..Default::default()
+            },
+            ExecOptions::default(),
+        ),
+    )
     .await;
-    match operation {
-        Ok(Ok(result)) => Json(ExecuteResponse {
+    // Cleanup has its own deadline so an expired execution deadline cannot
+    // cancel destruction of an already created sandbox.
+    let cleanup = tokio::time::timeout(Duration::from_secs(30), sandbox.destroy()).await;
+    let cleanup_error = match cleanup {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(error.to_string()),
+        Err(_) => Some("cleanup timed out".to_owned()),
+    };
+    if let Some(error) = &cleanup_error {
+        eprintln!("failed to destroy sandbox {}: {error}", sandbox.id());
+    }
+    match (operation, cleanup_error) {
+        (Ok(Ok(result)), None) => Json(ExecuteResponse {
             stdout: result.result.standard_output,
             stderr: result.result.standard_error,
             exit_code: result.result.exit_code,
@@ -82,12 +101,17 @@ async fn execute(State(state): State<AppState>, Json(input): Json<ExecuteRequest
             execution_milliseconds: result.execution_milliseconds,
         })
         .into_response(),
-        Ok(Err(error)) => (
+        (Ok(Ok(_)), Some(error)) => (
             StatusCode::BAD_GATEWAY,
             format!("execution failed: {error}"),
         )
             .into_response(),
-        Err(_) => (StatusCode::GATEWAY_TIMEOUT, "execution timed out").into_response(),
+        (Ok(Err(error)), _) => (
+            StatusCode::BAD_GATEWAY,
+            format!("execution failed: {error}"),
+        )
+            .into_response(),
+        (Err(_), _) => (StatusCode::GATEWAY_TIMEOUT, "execution timed out").into_response(),
     }
 }
 
