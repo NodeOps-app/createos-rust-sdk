@@ -739,6 +739,7 @@ mod access_token_tests {
 
         let created = owner.create_access_token().await.unwrap();
         assert_eq!(created.token, "skp_sb_first");
+        assert!(!format!("{created:?}").contains(&created.token));
         assert!(created.enabled && created.rotated_at.is_none());
         assert_eq!(
             owner
