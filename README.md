@@ -86,6 +86,38 @@ Use HTTPS for every non-loopback endpoint. For custom proxy or TLS settings,
 pass a `reqwest::ClientBuilder` to `Client::builder().http_client(...)`; the SDK
 still disables redirects so credentials cannot be forwarded to another origin.
 
+## Delegate access to one sandbox
+
+The owner can create one delegated token for a sandbox. Creation and rotation
+return its plaintext value once; inspection returns only a redacted hint.
+
+```rust,no_run
+# use createos::{Client, RunCommandRequest};
+# async fn example(client: Client) -> createos::Result<()> {
+let sandbox = client.sandbox("sb-1").await?;
+let created = sandbox.create_access_token().await?;
+let worker = sandbox.with_access_token(&created.token)?;
+let result = worker.run_command(
+    RunCommandRequest { command: "echo".into(), arguments: vec!["hello".into()], ..Default::default() },
+    Default::default(),
+).await?;
+println!("{}", result.result.standard_output);
+
+let metadata = sandbox.get_access_token().await?;
+println!("{:?}", metadata.token_hint);
+let replacement = sandbox.rotate_access_token().await?;
+// Give replacement.token to the worker instead of the old token.
+sandbox.disable_access_token().await?;
+# Ok(()) }
+```
+
+Keep the owner handle for token management. The delegated handle can operate
+its bound sandbox, including commands, files, processes, computer use, pause,
+resume, and destroy; it cannot manage tokens or account resources. Creating
+another enabled token returns HTTP 409; rotation requires an existing token.
+Disabling is idempotent. Revocation is immediate in the home region and
+propagates asynchronously to peer regions.
+
 ## Documentation
 
 - [CreateOS Sandbox overview](https://nodeops.network/createos/docs/Sandbox/Overview)
@@ -94,6 +126,7 @@ still disables redirects so credentials cannot be forwarded to another origin.
   contains the REST API reference and product guides.
 - [Rust API reference](https://docs.rs/createos/latest/createos/) is published
   on docs.rs; run `cargo doc --open` to generate it locally.
+- [Changelog](CHANGELOG.md) records SDK changes and the next package version.
 - [Runnable examples](#examples) cover command execution, files, streaming,
   ingress, snapshots, networking, templates, managed processes, and desktop use.
 - [Contributing guide](CONTRIBUTING.md) documents development checks and commit

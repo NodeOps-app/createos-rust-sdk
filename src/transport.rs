@@ -19,6 +19,14 @@ pub(crate) struct Transport {
 }
 
 impl Transport {
+    /// Returns a transport with the same connection settings and a separate credential.
+    pub(crate) fn with_api_key(&self, api_key: String) -> Arc<Self> {
+        Arc::new(Self {
+            api_key: Some(api_key),
+            ..self.clone()
+        })
+    }
+
     pub fn new(
         base_url: Url,
         api_key: Option<String>,

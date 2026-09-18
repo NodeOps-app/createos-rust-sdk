@@ -2,8 +2,9 @@ use crate::{
     AttachDiskOptions, BandwidthView, ComputerService, DetachDiskOptions, DiskAttachment,
     DiskDetachedResponse, EgressView, Error, ExecOptions, FilesService, ForkSandboxRequest,
     PaginationOptions, ProcessesService, RequestOptions, ResizeSandboxResponse, Result,
-    RunCommandRequest, RunCommandResponse, Sandbox, SandboxDisk, SandboxStatus, WaitOptions,
-    client::encode, client::fetch_all, transport::Transport,
+    RunCommandRequest, RunCommandResponse, Sandbox, SandboxAccessTokenCreateResponse,
+    SandboxAccessTokenMetadata, SandboxDisk, SandboxStatus, WaitOptions, client::encode,
+    client::fetch_all, transport::Transport,
 };
 use reqwest::Method;
 use serde::Serialize;
@@ -61,6 +62,71 @@ impl Instance {
     /// Returns desktop computer-use operations.
     pub fn computer(&self) -> ComputerService {
         ComputerService::new(self.clone())
+    }
+
+    /// Returns a separate handle that authenticates with a delegated sandbox token.
+    ///
+    /// Keep the original owner handle for token management. The server rejects
+    /// management operations made with a delegated credential.
+    pub fn with_access_token(&self, token: &str) -> Result<Self> {
+        let token = token.trim();
+        if token.is_empty() {
+            return Err(Error::InvalidArgument(
+                "sandbox access token must not be empty".into(),
+            ));
+        }
+        Ok(Self::new(
+            self.transport.with_api_key(token.to_owned()),
+            self.data(),
+        ))
+    }
+
+    /// Creates a delegated token and returns its plaintext value once.
+    pub async fn create_access_token(&self) -> Result<SandboxAccessTokenCreateResponse> {
+        self.transport
+            .empty(
+                Method::POST,
+                &self.path("/access-token"),
+                &[],
+                &RequestOptions::default(),
+            )
+            .await
+    }
+
+    /// Returns delegated token state and a redacted hint.
+    pub async fn get_access_token(&self) -> Result<SandboxAccessTokenMetadata> {
+        self.transport
+            .get(
+                &self.path("/access-token"),
+                &[],
+                &RequestOptions::default(),
+                true,
+            )
+            .await
+    }
+
+    /// Replaces an existing delegated token and returns its new plaintext value.
+    pub async fn rotate_access_token(&self) -> Result<SandboxAccessTokenCreateResponse> {
+        self.transport
+            .empty(
+                Method::POST,
+                &self.path("/access-token/rotate"),
+                &[],
+                &RequestOptions::default(),
+            )
+            .await
+    }
+
+    /// Revokes the delegated token, if present.
+    pub async fn disable_access_token(&self) -> Result<SandboxAccessTokenMetadata> {
+        self.transport
+            .empty(
+                Method::DELETE,
+                &self.path("/access-token"),
+                &[],
+                &RequestOptions::default(),
+            )
+            .await
     }
     pub(crate) fn path(&self, suffix: &str) -> String {
         format!("/v1/sandboxes/{}{suffix}", encode(&self.id()))
@@ -609,5 +675,115 @@ async fn self_signal(action: &str, reason: Option<&str>) -> Result<()> {
             "self-{action} returned HTTP {}",
             response.status()
         )))
+    }
+}
+
+#[cfg(test)]
+mod access_token_tests {
+    use super::*;
+    use std::{
+        io::{Read as _, Write as _},
+        net::TcpListener,
+        sync::mpsc,
+    };
+
+    #[tokio::test]
+    async fn token_lifecycle_keeps_owner_and_worker_credentials_separate() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (sender, receiver) = mpsc::channel();
+        let responses = [
+            r#"{"status":"success","data":{"token":"skp_sb_first","enabled":true,"created_at":"2026-09-18T10:00:00Z"}}"#,
+            r#"{"status":"success","data":{"enabled":true,"token_hint":"skp_sb...irst","created_at":"2026-09-18T10:00:00Z"}}"#,
+            r#"{"status":"success","data":{"result":{"stdout":"hello\n","stderr":"","exit_code":0},"exec_ms":1}}"#,
+            r#"{"status":"success","data":{"token":"skp_sb_second","enabled":true,"created_at":"2026-09-18T10:00:00Z","rotated_at":"2026-09-18T11:00:00Z"}}"#,
+            r#"{"status":"success","data":{"enabled":false}}"#,
+        ];
+        std::thread::spawn(move || {
+            for body in responses {
+                let (mut connection, _) = listener.accept().unwrap();
+                let mut request = [0_u8; 8192];
+                let length = connection.read(&mut request).unwrap();
+                sender
+                    .send(String::from_utf8_lossy(&request[..length]).into_owned())
+                    .unwrap();
+                write!(
+                    connection,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .unwrap();
+            }
+        });
+        let transport = Transport::new(
+            Url::parse(&format!("http://{address}")).unwrap(),
+            Some("owner".into()),
+            None,
+            None,
+            crate::RetryOptions::default(),
+            "test",
+        )
+        .unwrap();
+        let owner = Instance::new(
+            transport,
+            Sandbox {
+                id: "sb-1".into(),
+                status: SandboxStatus::from("running"),
+                ..Sandbox::default()
+            },
+        );
+        assert!(matches!(
+            owner.with_access_token("  "),
+            Err(Error::InvalidArgument(_))
+        ));
+
+        let created = owner.create_access_token().await.unwrap();
+        assert_eq!(created.token, "skp_sb_first");
+        assert!(created.enabled && created.rotated_at.is_none());
+        assert_eq!(
+            owner
+                .get_access_token()
+                .await
+                .unwrap()
+                .token_hint
+                .as_deref(),
+            Some("skp_sb...irst")
+        );
+        let worker = owner.with_access_token(&created.token).unwrap();
+        assert!(!Arc::ptr_eq(&owner.data, &worker.data));
+        let result = worker
+            .run_command(
+                RunCommandRequest {
+                    command: "echo".into(),
+                    arguments: vec!["hello".into()],
+                    ..RunCommandRequest::default()
+                },
+                ExecOptions::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.result.standard_output, "hello\n");
+        assert_eq!(
+            owner.rotate_access_token().await.unwrap().token,
+            "skp_sb_second"
+        );
+        assert!(!owner.disable_access_token().await.unwrap().enabled);
+
+        let expected = [
+            ("POST /v1/sandboxes/sb%2D1/access-token ", "owner"),
+            ("GET /v1/sandboxes/sb%2D1/access-token ", "owner"),
+            ("POST /v1/sandboxes/sb%2D1/exec ", "skp_sb_first"),
+            ("POST /v1/sandboxes/sb%2D1/access-token/rotate ", "owner"),
+            ("DELETE /v1/sandboxes/sb%2D1/access-token ", "owner"),
+        ];
+        for (line, credential) in expected {
+            let request = receiver.recv().unwrap();
+            assert!(request.starts_with(line), "{request}");
+            assert!(
+                request
+                    .to_ascii_lowercase()
+                    .contains(&format!("x-api-key: {credential}"))
+            );
+        }
     }
 }
