@@ -126,6 +126,7 @@ propagates asynchronously to peer regions.
   contains the REST API reference and product guides.
 - [Rust API reference](https://docs.rs/createos/latest/createos/) is published
   on docs.rs; run `cargo doc --open` to generate it locally.
+- [Changelog](CHANGELOG.md) records SDK changes and the next package version.
 - [Runnable examples](#examples) cover command execution, files, streaming,
   ingress, snapshots, networking, templates, managed processes, and desktop use.
 - [Contributing guide](CONTRIBUTING.md) documents development checks and commit
