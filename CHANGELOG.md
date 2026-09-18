@@ -4,6 +4,11 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ## Unreleased
 
+### Fixed
+
+- Redact plaintext sandbox access tokens from debug output to prevent
+  accidental disclosure in logs.
+
 ### Added
 
 - Sandbox access token creation, inspection, rotation, and disabling methods.

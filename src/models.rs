@@ -356,7 +356,7 @@ Sandbox {
 });
 
 /// Plaintext delegated token returned only when created or rotated.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct SandboxAccessTokenCreateResponse {
     /// Delegated credential. Store it securely; it cannot be read again.
     pub token: String,
@@ -366,6 +366,18 @@ pub struct SandboxAccessTokenCreateResponse {
     pub created_at: DateTime<Utc>,
     /// Time of the most recent rotation, if any.
     pub rotated_at: Option<DateTime<Utc>>,
+}
+
+impl fmt::Debug for SandboxAccessTokenCreateResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SandboxAccessTokenCreateResponse")
+            .field("token", &"[REDACTED]")
+            .field("enabled", &self.enabled)
+            .field("created_at", &self.created_at)
+            .field("rotated_at", &self.rotated_at)
+            .finish()
+    }
 }
 
 /// Delegated token state without plaintext credential material.
