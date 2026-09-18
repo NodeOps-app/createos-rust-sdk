@@ -354,6 +354,32 @@ Sandbox {
     #[serde(default)] bandwidth_ingress_bytes: i64, paused_at: Option<DateTime<Utc>>, last_resumed_at: Option<DateTime<Utc>>,
     forked_from: Option<String>, auto_pause_after_seconds: Option<u64>
 });
+
+/// Plaintext delegated token returned only when created or rotated.
+#[derive(Clone, Debug, Deserialize)]
+pub struct SandboxAccessTokenCreateResponse {
+    /// Delegated credential. Store it securely; it cannot be read again.
+    pub token: String,
+    /// Whether the token is enabled.
+    pub enabled: bool,
+    /// Time the token was first created.
+    pub created_at: DateTime<Utc>,
+    /// Time of the most recent rotation, if any.
+    pub rotated_at: Option<DateTime<Utc>>,
+}
+
+/// Delegated token state without plaintext credential material.
+#[derive(Clone, Debug, Deserialize)]
+pub struct SandboxAccessTokenMetadata {
+    /// Whether a delegated token is enabled.
+    pub enabled: bool,
+    /// Redacted token hint, when one exists.
+    pub token_hint: Option<String>,
+    /// Time the token was first created, when one exists.
+    pub created_at: Option<DateTime<Utc>>,
+    /// Time of the most recent rotation, if any.
+    pub rotated_at: Option<DateTime<Utc>>,
+}
 model!(/// Buffered command result.
     CommandResult { #[serde(rename = "stdout")] standard_output: String, #[serde(rename = "stderr")] standard_error: String, exit_code: i32, #[serde(default, rename = "error")] error_message: String });
 model!(/// Buffered command response.
