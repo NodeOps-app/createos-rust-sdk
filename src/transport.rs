@@ -1,5 +1,5 @@
 use crate::{Error, RequestOptions, Result, RetryOptions};
-use rand::Rng as _;
+use rand::RngExt as _;
 use reqwest::{Method, Response, StatusCode, header};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;

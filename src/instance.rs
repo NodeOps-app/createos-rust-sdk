@@ -254,7 +254,7 @@ impl Instance {
         }
         if timeout.is_some_and(|value| {
             value < Duration::from_secs(60)
-                || value > Duration::from_secs(86_400)
+                || value > Duration::from_hours(24)
                 || value.subsec_nanos() != 0
         }) {
             return Err(Error::InvalidArgument(
