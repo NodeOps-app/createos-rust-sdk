@@ -7,7 +7,7 @@ use std::{sync::Arc, time::Duration};
 use url::Url;
 
 pub(crate) const DEFAULT_BASE_URL: &str = "https://api.sb.createos.sh";
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
+const DEFAULT_TIMEOUT: Duration = Duration::from_mins(1);
 
 #[derive(Clone)]
 pub(crate) struct Transport {

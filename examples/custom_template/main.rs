@@ -31,7 +31,7 @@ async fn main() -> createos::Result<()> {
     let result = async {
         let options = TemplateLogsOptions {
             request: RequestOptions {
-                timeout: Some(Duration::from_secs(600)),
+                timeout: Some(Duration::from_mins(10)),
                 ..Default::default()
             },
             ..Default::default()
@@ -106,7 +106,7 @@ async fn main() -> createos::Result<()> {
                 tokio::time::sleep(Duration::from_secs(2)).await;
             }
             if !ready {
-                return Err(createos::Error::Timeout(Duration::from_secs(60)));
+                return Err(createos::Error::Timeout(Duration::from_mins(1)));
             }
             let response = sandbox
                 .run_command(
@@ -117,7 +117,7 @@ async fn main() -> createos::Result<()> {
                     },
                     ExecOptions {
                         request: RequestOptions {
-                            timeout: Some(Duration::from_secs(120)),
+                            timeout: Some(Duration::from_mins(2)),
                             ..Default::default()
                         },
                         ..Default::default()

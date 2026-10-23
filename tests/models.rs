@@ -1,7 +1,8 @@
 use createos::{
     ComputerButtonRequest, ComputerCreateScreenRequest, ComputerScrollRequest,
-    CreateSandboxRequest, PtySize, SandboxStatus, TemplateLogEvent,
+    CreateSandboxRequest, PtySize, Sandbox, SandboxStatus, TemplateLogEvent,
 };
+use std::collections::HashMap;
 
 #[test]
 fn request_uses_api_wire_names_and_omits_defaults() {
@@ -9,6 +10,7 @@ fn request_uses_api_wire_names_and_omits_defaults() {
         shape: "s-4vcpu-4gb".into(),
         ingress_enabled: true,
         ssh_public_keys: vec!["ssh-ed25519 example".into()],
+        labels: HashMap::from([("team".into(), "backend".into())]),
         ..Default::default()
     };
     let value = serde_json::to_value(request).unwrap();
@@ -16,6 +18,17 @@ fn request_uses_api_wire_names_and_omits_defaults() {
     assert_eq!(value["ingress_enabled"], true);
     assert!(value.get("ssh_public_keys").is_none());
     assert_eq!(value["ssh_pubkeys"][0], "ssh-ed25519 example");
+    assert_eq!(value["labels"]["team"], "backend");
+}
+
+#[test]
+fn sandbox_response_decodes_labels() {
+    let sandbox: Sandbox = serde_json::from_str(
+        r#"{"id":"sb-1","status":"running","labels":{"team":"backend"},"vcpu":1,"mem_mib":256,"disk_mib":1024}"#,
+    )
+    .unwrap();
+
+    assert_eq!(sandbox.labels["team"], "backend");
 }
 
 #[test]

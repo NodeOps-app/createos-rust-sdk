@@ -1,5 +1,6 @@
-use createos::{Client, CreateSandboxRequest, Error, RequestOptions};
+use createos::{Client, CreateSandboxRequest, Error, ListSandboxesOptions, RequestOptions};
 use std::{
+    collections::HashMap,
     io::{Read as _, Write as _},
     net::TcpListener,
     sync::mpsc,
@@ -73,6 +74,27 @@ async fn public_catalog_and_readiness_endpoints_omit_authentication() {
         assert!(request.starts_with(&format!("GET /prefix{path}")));
         assert!(!request.to_ascii_lowercase().contains("x-api-key:"));
     }
+}
+
+#[tokio::test]
+async fn sandbox_list_encodes_label_filter() {
+    let (base_url, request) = serve_once(
+        "200 OK",
+        r#"{"status":"success","data":{"data":[],"pagination":{"total":0}}}"#,
+    );
+    let client = Client::builder()
+        .base_url(base_url)
+        .api_key("secret")
+        .build()
+        .unwrap();
+    let options = ListSandboxesOptions {
+        labels: HashMap::from([("team".into(), "backend".into())]),
+        ..Default::default()
+    };
+
+    assert!(client.sandboxes(options).await.unwrap().is_empty());
+    let request = request.recv().unwrap();
+    assert!(request.contains("labels=%7B%22team%22%3A%22backend%22%7D"));
 }
 
 #[tokio::test]

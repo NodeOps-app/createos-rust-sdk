@@ -46,7 +46,7 @@ async fn execute(State(state): State<AppState>, Json(input): Json<ExecuteRequest
     let Ok(_permit) = state.slots.clone().try_acquire_owned() else {
         return (StatusCode::TOO_MANY_REQUESTS, "execution capacity reached").into_response();
     };
-    let deadline = Instant::now() + Duration::from_secs(120);
+    let deadline = Instant::now() + Duration::from_mins(2);
     let sandbox = match tokio::time::timeout_at(
         deadline,
         state.client.create_sandbox(CreateSandboxRequest {

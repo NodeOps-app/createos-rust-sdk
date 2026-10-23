@@ -217,6 +217,7 @@ impl Client {
             id: created.id,
             status: created.status,
             name: created.name,
+            labels: created.labels,
             ip_address: Some(created.ip_address),
             shape: created.shape,
             rootfs: created.rootfs,
@@ -255,6 +256,9 @@ impl Client {
         let mut query = Vec::new();
         if let Some(status) = options.status {
             query.push(("status".into(), status.to_string()));
+        }
+        if !options.labels.is_empty() {
+            query.push(("labels".into(), serde_json::to_string(&options.labels)?));
         }
         Ok(fetch_all::<Sandbox>(
             &self.transport,

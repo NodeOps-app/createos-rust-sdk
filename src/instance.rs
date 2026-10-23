@@ -44,6 +44,10 @@ impl Instance {
     pub fn ip_address(&self) -> Option<String> {
         self.data().ip_address
     }
+    /// Returns the last observed user-defined labels.
+    pub fn labels(&self) -> std::collections::HashMap<String, String> {
+        self.data().labels
+    }
     /// Returns a snapshot of the last observed server projection.
     pub fn data(&self) -> Sandbox {
         self.data
@@ -244,6 +248,28 @@ impl Instance {
         self.update(data);
         Ok(())
     }
+    /// Merges labels into the sandbox's existing labels.
+    pub async fn set_labels(
+        &self,
+        labels: std::collections::HashMap<String, String>,
+    ) -> Result<()> {
+        #[derive(Serialize)]
+        struct Body {
+            labels: std::collections::HashMap<String, String>,
+        }
+        let data = self
+            .transport
+            .send(
+                Method::PATCH,
+                &self.path(""),
+                &[],
+                &Body { labels },
+                &RequestOptions::default(),
+            )
+            .await?;
+        self.update(data);
+        Ok(())
+    }
     /// Sets the idle timeout. `None` disables auto-pause.
     pub async fn set_auto_pause(&self, timeout: Option<Duration>) -> Result<()> {
         #[derive(Serialize)]
@@ -253,7 +279,7 @@ impl Instance {
             disable_auto_pause: bool,
         }
         if timeout.is_some_and(|value| {
-            value < Duration::from_secs(60)
+            value < Duration::from_mins(1)
                 || value > Duration::from_hours(24)
                 || value.subsec_nanos() != 0
         }) {
@@ -486,7 +512,7 @@ impl Instance {
     }
     async fn wait_for(&self, desired: &str, terminal: &[&str], options: WaitOptions) -> Result<()> {
         let timeout = if options.timeout.is_zero() {
-            Duration::from_secs(120)
+            Duration::from_mins(2)
         } else {
             options.timeout
         };
