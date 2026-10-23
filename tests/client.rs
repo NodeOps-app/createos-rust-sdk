@@ -59,14 +59,10 @@ async fn public_catalog_and_readiness_endpoints_omit_authentication() {
             .unwrap();
         match path {
             "/readyz" => assert!(client.readiness().await.unwrap().ready),
-            "/v1/shapes" => assert!(client.shapes().await.unwrap().is_empty()),
-            "/v1/rootfs" => assert!(
-                client
-                    .root_file_systems()
-                    .await
-                    .unwrap()
-                    .root_file_systems
-                    .is_empty()
+            "/v1/shapes" => assert_eq!(client.shapes().await.unwrap(), Vec::new()),
+            "/v1/rootfs" => assert_eq!(
+                client.root_file_systems().await.unwrap().root_file_systems,
+                Vec::<String>::new()
             ),
             _ => unreachable!(),
         }
