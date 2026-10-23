@@ -44,7 +44,7 @@ async fn main() -> createos::Result<()> {
         println!("wrote {BASE_PATH}: {}", read_file(&base, BASE_PATH).await?);
         base.pause().await?;
         base.wait_until_paused(WaitOptions {
-            timeout: Duration::from_secs(600),
+            timeout: Duration::from_mins(10),
             ..Default::default()
         })
         .await?;
@@ -58,13 +58,13 @@ async fn main() -> createos::Result<()> {
         println!("fork created: {}", fork.id());
         let fork_result = async {
             fork.wait_until_paused(WaitOptions {
-                timeout: Duration::from_secs(600),
+                timeout: Duration::from_mins(10),
                 ..Default::default()
             })
             .await?;
             fork.resume().await?;
             fork.wait_until_running(WaitOptions {
-                timeout: Duration::from_secs(300),
+                timeout: Duration::from_mins(5),
                 ..Default::default()
             })
             .await?;
@@ -82,7 +82,7 @@ async fn main() -> createos::Result<()> {
 
             base.resume().await?;
             base.wait_until_running(WaitOptions {
-                timeout: Duration::from_secs(300),
+                timeout: Duration::from_mins(5),
                 ..Default::default()
             })
             .await?;

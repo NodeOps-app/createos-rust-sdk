@@ -86,6 +86,35 @@ Use HTTPS for every non-loopback endpoint. For custom proxy or TLS settings,
 pass a `reqwest::ClientBuilder` to `Client::builder().http_client(...)`; the SDK
 still disables redirects so credentials cannot be forwarded to another origin.
 
+## Organize sandboxes with labels
+
+```rust
+use createos::{CreateSandboxRequest, ListSandboxesOptions};
+use std::collections::HashMap;
+
+let sandbox = client.create_sandbox(CreateSandboxRequest {
+    shape: "s-1vcpu-1gb".into(),
+    rootfs: Some("alpine:3.20".into()),
+    labels: HashMap::from([
+        ("team".into(), "backend".into()),
+        ("environment".into(), "test".into()),
+    ]),
+    ..Default::default()
+}).await?;
+
+let matches = client.sandboxes(ListSandboxesOptions {
+    labels: HashMap::from([("team".into(), "backend".into())]),
+    ..Default::default()
+}).await?;
+
+sandbox.set_labels(HashMap::from([
+    ("environment".into(), "production".into()),
+])).await?;
+```
+
+List filters use AND semantics. `set_labels()` merges the supplied keys into
+the existing label map.
+
 ## Delegate access to one sandbox
 
 The owner can create one delegated token for a sandbox. Creation and rotation

@@ -4,6 +4,11 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ## Unreleased
 
+### Added
+
+- Sandbox labels on create and response models, AND-matched label filtering in
+  `Client::sandboxes`, and label merging through `Instance::set_labels`.
+
 ### Fixed
 
 - Redact plaintext sandbox access tokens from debug output to prevent
