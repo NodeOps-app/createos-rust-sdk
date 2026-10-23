@@ -94,6 +94,7 @@ use std::collections::HashMap;
 
 let sandbox = client.create_sandbox(CreateSandboxRequest {
     shape: "s-1vcpu-1gb".into(),
+    rootfs: Some("alpine:3.20".into()),
     labels: HashMap::from([
         ("team".into(), "backend".into()),
         ("environment".into(), "test".into()),
