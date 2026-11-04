@@ -1,7 +1,7 @@
 use crate::{
     CreateSandboxRequest, CreateSandboxResponse, DisksService, Error, Health, HostPublic, Instance,
     ListSandboxesOptions, NetworksService, Readiness, RequestOptions, Result, RetryOptions,
-    RootFsData, Sandbox, Shape, TemplatesService, WhoAmI,
+    RootFsData, Sandbox, Shape, SnapshotsService, TemplatesService, WhoAmI,
     transport::{DEFAULT_BASE_URL, Transport},
 };
 use reqwest::{Method, StatusCode};
@@ -149,6 +149,10 @@ impl Client {
     pub fn disks(&self) -> DisksService {
         DisksService::new(self.transport.clone())
     }
+    /// Returns account-level reusable-snapshot operations.
+    pub fn snapshots(&self) -> SnapshotsService {
+        SnapshotsService::new(self.transport.clone())
+    }
 
     /// Returns unauthenticated control-plane liveness.
     pub async fn health(&self) -> Result<Health> {
@@ -216,6 +220,7 @@ impl Client {
         let sandbox = Sandbox {
             id: created.id,
             status: created.status,
+            snapshot_id: created.snapshot_id,
             name: created.name,
             labels: created.labels,
             ip_address: Some(created.ip_address),

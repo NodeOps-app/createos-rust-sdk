@@ -9,7 +9,8 @@ use crate::{
     ManagedProcessConnectEvent, ManagedProcessConnectFrame, ManagedProcessConnectOptions,
     ManagedProcessCreateRequest, ManagedProcessDeleteOptions, ManagedProcessSignal,
     ManagedProcessWaitOptions, Network, NetworkCreateRequest, PaginationOptions, PtySize,
-    RequestOptions, Result, Template, TemplateLogEvent, TemplateLogsOptions,
+    RequestOptions, Result, Snapshot, SnapshotDeletedResponse, Template, TemplateLogEvent,
+    TemplateLogsOptions,
     client::{encode, fetch_all},
     transport::Transport,
 };
@@ -647,6 +648,51 @@ impl DisksService {
                 &format!("/v1/disks/{}", encode(id_or_name)),
                 &[],
                 &Body { credentials },
+                &RequestOptions::default(),
+            )
+            .await
+    }
+}
+
+/// Reusable sandbox snapshot operations.
+#[derive(Clone)]
+pub struct SnapshotsService {
+    transport: Arc<Transport>,
+}
+impl SnapshotsService {
+    pub(crate) fn new(transport: Arc<Transport>) -> Self {
+        Self { transport }
+    }
+    /// Lists reusable snapshots owned by the caller.
+    pub async fn list(&self, options: PaginationOptions) -> Result<Vec<Snapshot>> {
+        fetch_all(
+            &self.transport,
+            "/v1/snapshots",
+            offset_query(options.offset),
+            options.limit,
+            Some("snapshots"),
+            &RequestOptions::default(),
+        )
+        .await
+    }
+    /// Gets an owned reusable snapshot by ID.
+    pub async fn get(&self, id: &str) -> Result<Snapshot> {
+        self.transport
+            .get(
+                &format!("/v1/snapshots/{}", encode(id)),
+                &[],
+                &RequestOptions::default(),
+                true,
+            )
+            .await
+    }
+    /// Removes an owned ready or failed snapshot from API listings.
+    pub async fn delete(&self, id: &str) -> Result<SnapshotDeletedResponse> {
+        self.transport
+            .empty(
+                Method::DELETE,
+                &format!("/v1/snapshots/{}", encode(id)),
+                &[],
                 &RequestOptions::default(),
             )
             .await

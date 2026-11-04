@@ -38,6 +38,10 @@ SandboxStatus {
     RESUMING = "resuming", FORKING = "forking", ERROR = "error", DESTROYING = "destroying",
     DESTROYED = "destroyed", FAILED = "failed"
 });
+string_type!(/// Reusable snapshot capture type.
+    SnapshotType { DISK = "disk", FULL = "full" });
+string_type!(/// Reusable snapshot lifecycle state.
+    SnapshotStatus { CREATING = "creating", READY = "ready", FAILED = "failed", DELETING = "deleting" });
 string_type!(/// Command stream event kind.
     ExecStreamEventType { STDOUT = "stdout", STDERR = "stderr", EXIT = "exit", ERROR = "error", HEARTBEAT = "heartbeat" });
 string_type!(/// Managed process execution kind.
@@ -249,7 +253,8 @@ model!(/// Persistent disk attachment.
     DiskAttachment { disk_id: String, mount_path: String, #[serde(default, skip_serializing_if = "Option::is_none")] sub_path: Option<String> });
 model!(/// Sandbox creation body.
 CreateSandboxRequest {
-    shape: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")] shape: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")] snapshot_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")] rootfs: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")] name: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")] labels: HashMap<String, String>,
@@ -264,6 +269,11 @@ CreateSandboxRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")] disks: Vec<DiskAttachment>,
     #[serde(default, skip_serializing_if = "Option::is_none")] region: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")] auto_pause_after_seconds: Option<u64>
+});
+model!(/// Reusable snapshot capture request.
+CreateSnapshotRequest {
+    #[serde(rename = "type")] kind: SnapshotType,
+    #[serde(default, skip_serializing_if = "Option::is_none")] name: Option<String>
 });
 model!(/// Optional overrides applied to a sandbox fork.
 ForkSandboxRequest {
@@ -344,10 +354,10 @@ model!(/// Built-in root filesystem catalog.
 model!(/// Public worker-host projection.
     HostPublic { id: String, status: HostStatus, #[serde(rename = "free_mib")] free_memory_mib: i64, #[serde(rename = "vm_count")] sandbox_count: u64, #[serde(default, rename = "rootfses")] root_file_systems: Vec<String> });
 model!(/// Sandbox creation result.
-    CreateSandboxResponse { id: String, status: SandboxStatus, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, #[serde(rename = "ip")] ip_address: String, shape: String, rootfs: Option<String>, vcpu: u32, #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, #[serde(rename = "spawn_ms")] spawn_milliseconds: f64, #[serde(default, rename = "egress")] egress_rules: Vec<String>, bandwidth_quota_bytes: i64, #[serde(default)] ingress_url_template: String });
+    CreateSandboxResponse { id: String, status: SandboxStatus, snapshot_id: Option<String>, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, #[serde(rename = "ip")] ip_address: String, shape: String, rootfs: Option<String>, vcpu: u32, #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, #[serde(rename = "spawn_ms")] spawn_milliseconds: f64, #[serde(default, rename = "egress")] egress_rules: Vec<String>, bandwidth_quota_bytes: i64, #[serde(default)] ingress_url_template: String });
 model!(/// Full sandbox projection.
 Sandbox {
-    id: String, status: SandboxStatus, #[serde(rename = "ip")] ip_address: Option<String>, vcpu: u32,
+    id: String, status: SandboxStatus, snapshot_id: Option<String>, #[serde(rename = "ip")] ip_address: Option<String>, vcpu: u32,
         #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, created_at: Option<DateTime<Utc>>, #[serde(default)] ingress_enabled: bool,
     #[serde(default)] ingress_url_template: String, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, running_at: Option<DateTime<Utc>>,
     destroyed_at: Option<DateTime<Utc>>, #[serde(default, rename = "spawn_ms")] spawn_milliseconds: f64,
@@ -357,6 +367,17 @@ Sandbox {
     #[serde(default)] bandwidth_ingress_bytes: i64, paused_at: Option<DateTime<Utc>>, last_resumed_at: Option<DateTime<Utc>>,
     forked_from: Option<String>, auto_pause_after_seconds: Option<u64>
 });
+model!(/// Owned reusable sandbox snapshot.
+Snapshot {
+    id: String, sandbox_id: String, name: Option<String>,
+    #[serde(rename = "type")] kind: SnapshotType, status: SnapshotStatus,
+    created_at: Option<DateTime<Utc>>, ready_at: Option<DateTime<Utc>>,
+    #[serde(default)] shape: String, #[serde(default)] vcpu: u32,
+    #[serde(default, rename = "mem_mib")] memory_mib: u64,
+    #[serde(default)] disk_mib: i64, #[serde(default)] size_bytes: i64
+});
+model!(/// Accepted reusable snapshot deletion.
+    SnapshotDeletedResponse { id: String, status: SnapshotStatus });
 
 /// Plaintext delegated token returned only when created or rotated.
 #[derive(Clone, Deserialize)]

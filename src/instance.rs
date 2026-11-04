@@ -1,9 +1,9 @@
 use crate::{
-    AttachDiskOptions, BandwidthView, ComputerService, DetachDiskOptions, DiskAttachment,
-    DiskDetachedResponse, EgressView, Error, ExecOptions, FilesService, ForkSandboxRequest,
-    PaginationOptions, ProcessesService, RequestOptions, ResizeSandboxResponse, Result,
-    RunCommandRequest, RunCommandResponse, Sandbox, SandboxAccessTokenCreateResponse,
-    SandboxAccessTokenMetadata, SandboxDisk, SandboxStatus, WaitOptions, client::encode,
+    AttachDiskOptions, BandwidthView, ComputerService, CreateSnapshotRequest, DetachDiskOptions,
+    DiskAttachment, DiskDetachedResponse, EgressView, Error, ExecOptions, FilesService,
+    ForkSandboxRequest, PaginationOptions, ProcessesService, RequestOptions, ResizeSandboxResponse,
+    Result, RunCommandRequest, RunCommandResponse, Sandbox, SandboxAccessTokenCreateResponse,
+    SandboxAccessTokenMetadata, SandboxDisk, SandboxStatus, Snapshot, WaitOptions, client::encode,
     client::fetch_all, transport::Transport,
 };
 use reqwest::Method;
@@ -158,6 +158,18 @@ impl Instance {
     /// Restores a paused sandbox.
     pub async fn resume(&self) -> Result<()> {
         self.lifecycle("/resume").await
+    }
+    /// Starts a reusable snapshot capture from this running sandbox.
+    pub async fn create_snapshot(&self, request: CreateSnapshotRequest) -> Result<Snapshot> {
+        self.transport
+            .send(
+                Method::POST,
+                &self.path("/snapshots"),
+                &[],
+                &request,
+                &RequestOptions::default(),
+            )
+            .await
     }
     async fn lifecycle(&self, suffix: &str) -> Result<()> {
         let data = self
