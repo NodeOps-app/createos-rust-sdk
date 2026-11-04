@@ -115,6 +115,26 @@ sandbox.set_labels(HashMap::from([
 List filters use AND semantics. `set_labels()` merges the supplied keys into
 the existing label map.
 
+## Capture and restore snapshots
+
+```rust
+let snapshot = sandbox.create_snapshot(CreateSnapshotRequest {
+    kind: SnapshotType::DISK.into(),
+    name: Some("configured-workspace".into()),
+}).await?;
+let snapshot = client.snapshots().get(&snapshot.id).await?; // poll until ready
+let restored = client.create_sandbox(CreateSandboxRequest {
+    snapshot_id: Some(snapshot.id),
+    ..Default::default()
+}).await?;
+```
+
+Disk snapshots capture the filesystem. Full snapshots also retain memory and
+must be restored with their captured CPU, memory, and disk sizes. Snapshot
+capture requires a running source sandbox with no attached external disks.
+Each account may retain up to five snapshots across both types. See the runnable
+[snapshot example](examples/snapshots/README.md).
+
 ## Delegate access to one sandbox
 
 The owner can create one delegated token for a sandbox. Creation and rotation
@@ -445,6 +465,7 @@ Runnable examples live under [`examples/`](examples/):
 - [HTTP execution server](examples/execution_server/README.md)
 - [Command streaming](examples/command_streaming/README.md)
 - [Files and snapshots](examples/files_and_snapshots/README.md)
+- [Reusable snapshots](examples/snapshots/README.md)
 - [Ingress preview](examples/ingress_preview/README.md)
 - [Private overlay network](examples/network/README.md)
 - [Custom template](examples/custom_template/README.md)

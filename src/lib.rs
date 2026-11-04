@@ -17,6 +17,6 @@ pub use instance::{Instance, self_delete, self_pause};
 pub use models::*;
 pub use services::{
     CommandStream, ComputerService, DisksService, FilesService, KeyboardService, MouseService,
-    NetworksService, ProcessStream, ProcessesService, ScreensService, TemplateLogStream,
-    TemplatesService, WindowsService,
+    NetworksService, ProcessStream, ProcessesService, ScreensService, SnapshotsService,
+    TemplateLogStream, TemplatesService, WindowsService,
 };

@@ -6,6 +6,8 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ### Added
 
+- Reusable disk and full snapshot create, get, list, and delete operations,
+  plus sandbox restoration through `CreateSandboxRequest::snapshot_id`.
 - Sandbox labels on create and response models, AND-matched label filtering in
   `Client::sandboxes`, and label merging through `Instance::set_labels`.
 
