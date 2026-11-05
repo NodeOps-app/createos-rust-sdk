@@ -275,6 +275,11 @@ CreateSnapshotRequest {
     #[serde(rename = "type")] kind: SnapshotType,
     #[serde(default, skip_serializing_if = "Option::is_none")] name: Option<String>
 });
+model!(/// Checkpoint creation request.
+CreateCheckpointRequest {
+    path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")] name: Option<String>
+});
 model!(/// Optional overrides applied to a sandbox fork.
 ForkSandboxRequest {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")] start_paused: bool,
@@ -378,6 +383,13 @@ Snapshot {
 });
 model!(/// Accepted reusable snapshot deletion.
     SnapshotDeletedResponse { id: String, status: SnapshotStatus });
+model!(/// Point-in-time checkpoint of one sandbox directory.
+Checkpoint {
+    id: String, path: String, name: Option<String>, parent_id: Option<String>,
+    created_at: DateTime<Utc>
+});
+model!(/// Result of restoring a checkpoint.
+    CheckpointRestoreResponse { checkpoint_id: String, path: String });
 
 /// Plaintext delegated token returned only when created or rotated.
 #[derive(Clone, Deserialize)]

@@ -135,6 +135,24 @@ capture requires a running source sandbox with no attached external disks.
 Each account may retain up to five snapshots across both types. See the runnable
 [snapshot example](examples/snapshots/README.md).
 
+## Checkpoint a directory
+
+```rust
+let checkpoint = sandbox.checkpoints().create(CreateCheckpointRequest {
+    path: "/workspace/project".into(),
+    name: Some("before-update".into()),
+}).await?;
+
+sandbox.checkpoints().restore(&checkpoint.id).await?;
+sandbox.checkpoints().delete(&checkpoint.id).await?;
+```
+
+Checkpoints provide local file history inside one running sandbox.
+They restore to the original path, do not capture memory, and disappear with
+the sandbox. System directories, mount points, overlapping paths, and paths
+containing special files or hard links are rejected. See the runnable
+[checkpoint example](examples/checkpoints/README.md).
+
 ## Delegate access to one sandbox
 
 The owner can create one delegated token for a sandbox. Creation and rotation
@@ -466,6 +484,7 @@ Runnable examples live under [`examples/`](examples/):
 - [Command streaming](examples/command_streaming/README.md)
 - [Files and snapshots](examples/files_and_snapshots/README.md)
 - [Reusable snapshots](examples/snapshots/README.md)
+- [Checkpoints](examples/checkpoints/README.md)
 - [Ingress preview](examples/ingress_preview/README.md)
 - [Private overlay network](examples/network/README.md)
 - [Custom template](examples/custom_template/README.md)

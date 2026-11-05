@@ -16,7 +16,7 @@ pub use error::{ApiError, CommandError, Error, Result};
 pub use instance::{Instance, self_delete, self_pause};
 pub use models::*;
 pub use services::{
-    CommandStream, ComputerService, DisksService, FilesService, KeyboardService, MouseService,
-    NetworksService, ProcessStream, ProcessesService, ScreensService, SnapshotsService,
-    TemplateLogStream, TemplatesService, WindowsService,
+    CheckpointsService, CommandStream, ComputerService, DisksService, FilesService,
+    KeyboardService, MouseService, NetworksService, ProcessStream, ProcessesService,
+    ScreensService, SnapshotsService, TemplateLogStream, TemplatesService, WindowsService,
 };

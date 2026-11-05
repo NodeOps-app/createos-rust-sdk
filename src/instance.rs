@@ -1,10 +1,10 @@
 use crate::{
-    AttachDiskOptions, BandwidthView, ComputerService, CreateSnapshotRequest, DetachDiskOptions,
-    DiskAttachment, DiskDetachedResponse, EgressView, Error, ExecOptions, FilesService,
-    ForkSandboxRequest, PaginationOptions, ProcessesService, RequestOptions, ResizeSandboxResponse,
-    Result, RunCommandRequest, RunCommandResponse, Sandbox, SandboxAccessTokenCreateResponse,
-    SandboxAccessTokenMetadata, SandboxDisk, SandboxStatus, Snapshot, WaitOptions, client::encode,
-    client::fetch_all, transport::Transport,
+    AttachDiskOptions, BandwidthView, CheckpointsService, ComputerService, CreateSnapshotRequest,
+    DetachDiskOptions, DiskAttachment, DiskDetachedResponse, EgressView, Error, ExecOptions,
+    FilesService, ForkSandboxRequest, PaginationOptions, ProcessesService, RequestOptions,
+    ResizeSandboxResponse, Result, RunCommandRequest, RunCommandResponse, Sandbox,
+    SandboxAccessTokenCreateResponse, SandboxAccessTokenMetadata, SandboxDisk, SandboxStatus,
+    Snapshot, WaitOptions, client::encode, client::fetch_all, transport::Transport,
 };
 use reqwest::Method;
 use serde::Serialize;
@@ -66,6 +66,10 @@ impl Instance {
     /// Returns desktop computer-use operations.
     pub fn computer(&self) -> ComputerService {
         ComputerService::new(self.clone())
+    }
+    /// Returns checkpoint operations.
+    pub fn checkpoints(&self) -> CheckpointsService {
+        CheckpointsService::new(self.clone())
     }
 
     /// Returns a separate handle that authenticates with a delegated sandbox token.
