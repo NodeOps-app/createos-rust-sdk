@@ -6,6 +6,8 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ### Added
 
+- Checkpoint create, list, restore, and delete operations through
+  `Instance::checkpoints`.
 - Reusable disk and full snapshot create, get, list, and delete operations,
   plus sandbox restoration through `CreateSandboxRequest::snapshot_id`.
 - Sandbox labels on create and response models, AND-matched label filtering in
@@ -23,4 +25,4 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ### Changed
 
-- Set the next crate version to `0.1.1`; the default user agent follows the crate version.
+- Set the next crate version to `0.1.2`; the default user agent follows the crate version.

@@ -1,16 +1,16 @@
 use crate::{
-    ApiError, ComputerButtonRequest, ComputerClickRequest, ComputerCreateScreenRequest,
-    ComputerDragRequest, ComputerLaunchRequest, ComputerListWindowsOptions, ComputerOpenRequest,
-    ComputerPoint, ComputerScreen, ComputerScreenConnection, ComputerScreenGeometry,
-    ComputerScreenId, ComputerScreenOptions, ComputerScreenshotOptions, ComputerScrollRequest,
-    ComputerTypeRequest, ComputerWindow, ComputerWindowGeometry, ComputerWindowMoveRequest,
-    ComputerWindowResizeRequest, Disk, DiskCreateRequest, DiskCredentials, DiskDeletedResponse,
-    Error, ExecStreamEventType, GetTemplateOptions, Instance, ManagedProcess,
-    ManagedProcessConnectEvent, ManagedProcessConnectFrame, ManagedProcessConnectOptions,
-    ManagedProcessCreateRequest, ManagedProcessDeleteOptions, ManagedProcessSignal,
-    ManagedProcessWaitOptions, Network, NetworkCreateRequest, PaginationOptions, PtySize,
-    RequestOptions, Result, Snapshot, SnapshotDeletedResponse, Template, TemplateLogEvent,
-    TemplateLogsOptions,
+    ApiError, Checkpoint, CheckpointRestoreResponse, ComputerButtonRequest, ComputerClickRequest,
+    ComputerCreateScreenRequest, ComputerDragRequest, ComputerLaunchRequest,
+    ComputerListWindowsOptions, ComputerOpenRequest, ComputerPoint, ComputerScreen,
+    ComputerScreenConnection, ComputerScreenGeometry, ComputerScreenId, ComputerScreenOptions,
+    ComputerScreenshotOptions, ComputerScrollRequest, ComputerTypeRequest, ComputerWindow,
+    ComputerWindowGeometry, ComputerWindowMoveRequest, ComputerWindowResizeRequest,
+    CreateCheckpointRequest, Disk, DiskCreateRequest, DiskCredentials, DiskDeletedResponse, Error,
+    ExecStreamEventType, GetTemplateOptions, Instance, ManagedProcess, ManagedProcessConnectEvent,
+    ManagedProcessConnectFrame, ManagedProcessConnectOptions, ManagedProcessCreateRequest,
+    ManagedProcessDeleteOptions, ManagedProcessSignal, ManagedProcessWaitOptions, Network,
+    NetworkCreateRequest, PaginationOptions, PtySize, RequestOptions, Result, Snapshot,
+    SnapshotDeletedResponse, Template, TemplateLogEvent, TemplateLogsOptions,
     client::{encode, fetch_all},
     transport::Transport,
 };
@@ -144,6 +144,72 @@ fn event(kind: &str) -> crate::CommandStreamEvent {
 #[derive(Clone)]
 pub struct FilesService {
     instance: Instance,
+}
+
+/// Checkpoint operations for one running sandbox.
+#[derive(Clone)]
+pub struct CheckpointsService {
+    instance: Instance,
+}
+impl CheckpointsService {
+    pub(crate) fn new(instance: Instance) -> Self {
+        Self { instance }
+    }
+    fn path(&self, checkpoint_id: Option<&str>, suffix: &str) -> String {
+        let mut path = self.instance.path("/checkpoints");
+        if let Some(checkpoint_id) = checkpoint_id {
+            path.push('/');
+            path.push_str(&encode(checkpoint_id));
+        }
+        path.push_str(suffix);
+        path
+    }
+    /// Creates a checkpoint of one eligible directory.
+    pub async fn create(&self, request: CreateCheckpointRequest) -> Result<Checkpoint> {
+        self.instance
+            .transport
+            .send(
+                Method::POST,
+                &self.path(None, ""),
+                &[],
+                &request,
+                &RequestOptions::default(),
+            )
+            .await
+    }
+    /// Lists checkpoints from oldest to newest.
+    pub async fn list(&self) -> Result<Vec<Checkpoint>> {
+        self.instance
+            .transport
+            .get(&self.path(None, ""), &[], &RequestOptions::default(), true)
+            .await
+    }
+    /// Restores a checkpoint to its original directory path.
+    pub async fn restore(&self, checkpoint_id: &str) -> Result<CheckpointRestoreResponse> {
+        self.instance
+            .transport
+            .empty(
+                Method::POST,
+                &self.path(Some(checkpoint_id), "/restore"),
+                &[],
+                &RequestOptions::default(),
+            )
+            .await
+    }
+    /// Deletes one checkpoint record and its retained layer.
+    pub async fn delete(&self, checkpoint_id: &str) -> Result<()> {
+        let _: serde_json::Value = self
+            .instance
+            .transport
+            .empty(
+                Method::DELETE,
+                &self.path(Some(checkpoint_id), ""),
+                &[],
+                &RequestOptions::default(),
+            )
+            .await?;
+        Ok(())
+    }
 }
 impl FilesService {
     pub(crate) fn new(instance: Instance) -> Self {
@@ -1183,5 +1249,92 @@ fn screen_query(id: Option<&ComputerScreenId>) -> Vec<(String, String)> {
 fn add_opt<T: ToString>(query: &mut Vec<(String, String)>, key: &str, value: Option<T>) {
     if let Some(value) = value {
         query.push((key.into(), value.to_string()));
+    }
+}
+
+#[cfg(test)]
+mod checkpoint_tests {
+    use super::*;
+    use crate::{Sandbox, SandboxStatus};
+    use std::{
+        io::{Read as _, Write as _},
+        net::TcpListener,
+        sync::mpsc,
+    };
+    use url::Url;
+
+    #[tokio::test]
+    async fn checkpoint_lifecycle_uses_encoded_ids_and_bodyless_actions() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (sender, receiver) = mpsc::channel();
+        let responses = [
+            r#"{"status":"success","data":{"id":"cp_first/segment","path":"/root/project","name":"before-update","created_at":"2026-11-05T12:00:00Z"}}"#,
+            r#"{"status":"success","data":[{"id":"cp_first/segment","path":"/root/project","created_at":"2026-11-05T12:00:00Z"}]}"#,
+            r#"{"status":"success","data":{"checkpoint_id":"cp_first/segment","path":"/root/project"}}"#,
+            r#"{"status":"success","data":{}}"#,
+        ];
+        std::thread::spawn(move || {
+            for body in responses {
+                let (mut connection, _) = listener.accept().unwrap();
+                let mut request = [0_u8; 8192];
+                let length = connection.read(&mut request).unwrap();
+                sender
+                    .send(String::from_utf8_lossy(&request[..length]).into_owned())
+                    .unwrap();
+                write!(
+                    connection,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .unwrap();
+            }
+        });
+        let transport = Transport::new(
+            Url::parse(&format!("http://{address}")).unwrap(),
+            Some("owner".into()),
+            None,
+            None,
+            crate::RetryOptions::default(),
+            "test",
+        )
+        .unwrap();
+        let instance = Instance::new(
+            transport,
+            Sandbox {
+                id: "sb-1".into(),
+                status: SandboxStatus::from("running"),
+                ..Sandbox::default()
+            },
+        );
+        let checkpoints = instance.checkpoints();
+
+        let created = checkpoints
+            .create(CreateCheckpointRequest {
+                path: "/root/project".into(),
+                name: Some("before-update".into()),
+            })
+            .await
+            .unwrap();
+        assert_eq!(created.id, "cp_first/segment");
+        assert_eq!(checkpoints.list().await.unwrap().len(), 1);
+        assert_eq!(
+            checkpoints.restore(&created.id).await.unwrap().path,
+            "/root/project"
+        );
+        checkpoints.delete(&created.id).await.unwrap();
+
+        let requests: Vec<String> = (0..4).map(|_| receiver.recv().unwrap()).collect();
+        assert!(requests[0].starts_with("POST /v1/sandboxes/sb%2D1/checkpoints "));
+        assert!(requests[0].contains(r#"{"path":"/root/project","name":"before-update"}"#));
+        assert!(requests[1].starts_with("GET /v1/sandboxes/sb%2D1/checkpoints "));
+        assert!(
+            requests[2]
+                .starts_with("POST /v1/sandboxes/sb%2D1/checkpoints/cp%5Ffirst%2Fsegment/restore ")
+        );
+        assert!(
+            requests[3]
+                .starts_with("DELETE /v1/sandboxes/sb%2D1/checkpoints/cp%5Ffirst%2Fsegment ")
+        );
     }
 }
