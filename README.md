@@ -115,6 +115,25 @@ sandbox.set_labels(HashMap::from([
 List filters use AND semantics. `set_labels()` merges the supplied keys into
 the existing label map.
 
+## Limit sandbox lifetime
+
+```rust
+let sandbox = client.create_sandbox(CreateSandboxRequest {
+    shape: "s-1vcpu-1gb".into(),
+    rootfs: Some("devbox:1".into()),
+    timeout_minutes: Some(10),
+    sigterm_before_expiry: true,
+    ..Default::default()
+}).await?;
+
+println!("expires at {:?}", sandbox.data().expires_at);
+```
+
+`timeout_minutes` accepts 2–1440 whole minutes and starts when the sandbox first
+reaches `running`. Activity and pause/resume do not extend the deadline.
+`sigterm_before_expiry` requests a best-effort warning to managed workloads
+during the final minute and requires `timeout_minutes`.
+
 ## Capture and restore snapshots
 
 ```rust

@@ -6,6 +6,8 @@ All notable changes to the CreateOS Rust SDK are recorded here.
 
 ### Added
 
+- Optional sandbox expiry through `CreateSandboxRequest::timeout_minutes`, with
+  `expires_at` response fields and an optional final-minute SIGTERM warning.
 - Checkpoint create, list, restore, and delete operations through
   `Instance::checkpoints`.
 - Reusable disk and full snapshot create, get, list, and delete operations,
