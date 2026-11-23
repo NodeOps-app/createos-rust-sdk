@@ -258,6 +258,8 @@ CreateSandboxRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")] rootfs: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")] name: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")] labels: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")] timeout_minutes: Option<u32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")] sigterm_before_expiry: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")] networks: Vec<NetworkEntry>,
     #[serde(default, skip_serializing_if = "Option::is_none")] disk_mib: Option<i64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "egress")] egress_rules: Vec<String>,
@@ -359,10 +361,10 @@ model!(/// Built-in root filesystem catalog.
 model!(/// Public worker-host projection.
     HostPublic { id: String, status: HostStatus, #[serde(rename = "free_mib")] free_memory_mib: i64, #[serde(rename = "vm_count")] sandbox_count: u64, #[serde(default, rename = "rootfses")] root_file_systems: Vec<String> });
 model!(/// Sandbox creation result.
-    CreateSandboxResponse { id: String, status: SandboxStatus, snapshot_id: Option<String>, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, #[serde(rename = "ip")] ip_address: String, shape: String, rootfs: Option<String>, vcpu: u32, #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, #[serde(rename = "spawn_ms")] spawn_milliseconds: f64, #[serde(default, rename = "egress")] egress_rules: Vec<String>, bandwidth_quota_bytes: i64, #[serde(default)] ingress_url_template: String });
+    CreateSandboxResponse { id: String, status: SandboxStatus, snapshot_id: Option<String>, expires_at: Option<DateTime<Utc>>, #[serde(default)] sigterm_before_expiry: bool, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, #[serde(rename = "ip")] ip_address: String, shape: String, rootfs: Option<String>, vcpu: u32, #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, #[serde(rename = "spawn_ms")] spawn_milliseconds: f64, #[serde(default, rename = "egress")] egress_rules: Vec<String>, bandwidth_quota_bytes: i64, #[serde(default)] ingress_url_template: String });
 model!(/// Full sandbox projection.
 Sandbox {
-    id: String, status: SandboxStatus, snapshot_id: Option<String>, #[serde(rename = "ip")] ip_address: Option<String>, vcpu: u32,
+    id: String, status: SandboxStatus, snapshot_id: Option<String>, expires_at: Option<DateTime<Utc>>, #[serde(default)] sigterm_before_expiry: bool, #[serde(rename = "ip")] ip_address: Option<String>, vcpu: u32,
         #[serde(rename = "mem_mib")] memory_mib: u64, disk_mib: i64, created_at: Option<DateTime<Utc>>, #[serde(default)] ingress_enabled: bool,
     #[serde(default)] ingress_url_template: String, name: Option<String>, #[serde(default)] labels: HashMap<String, String>, running_at: Option<DateTime<Utc>>,
     destroyed_at: Option<DateTime<Utc>>, #[serde(default, rename = "spawn_ms")] spawn_milliseconds: f64,

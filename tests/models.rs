@@ -9,6 +9,8 @@ fn request_uses_api_wire_names_and_omits_defaults() {
     let request = CreateSandboxRequest {
         shape: "s-4vcpu-4gb".into(),
         ingress_enabled: true,
+        timeout_minutes: Some(10),
+        sigterm_before_expiry: true,
         ssh_public_keys: vec!["ssh-ed25519 example".into()],
         labels: HashMap::from([("team".into(), "backend".into())]),
         ..Default::default()
@@ -19,16 +21,23 @@ fn request_uses_api_wire_names_and_omits_defaults() {
     assert!(value.get("ssh_public_keys").is_none());
     assert_eq!(value["ssh_pubkeys"][0], "ssh-ed25519 example");
     assert_eq!(value["labels"]["team"], "backend");
+    assert_eq!(value["timeout_minutes"], 10);
+    assert_eq!(value["sigterm_before_expiry"], true);
 }
 
 #[test]
-fn sandbox_response_decodes_labels() {
+fn sandbox_response_decodes_labels_and_expiry() {
     let sandbox: Sandbox = serde_json::from_str(
-        r#"{"id":"sb-1","status":"running","labels":{"team":"backend"},"vcpu":1,"mem_mib":256,"disk_mib":1024}"#,
+        r#"{"id":"sb-1","status":"running","labels":{"team":"backend"},"expires_at":"2026-11-23T12:10:00Z","sigterm_before_expiry":true,"vcpu":1,"mem_mib":256,"disk_mib":1024}"#,
     )
     .unwrap();
 
     assert_eq!(sandbox.labels["team"], "backend");
+    assert_eq!(
+        sandbox.expires_at.unwrap().to_rfc3339(),
+        "2026-11-23T12:10:00+00:00"
+    );
+    assert!(sandbox.sigterm_before_expiry);
 }
 
 #[test]

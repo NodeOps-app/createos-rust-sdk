@@ -221,6 +221,8 @@ impl Client {
             id: created.id,
             status: created.status,
             snapshot_id: created.snapshot_id,
+            expires_at: created.expires_at,
+            sigterm_before_expiry: created.sigterm_before_expiry,
             name: created.name,
             labels: created.labels,
             ip_address: Some(created.ip_address),
